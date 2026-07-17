@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#000000"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Rutina</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #000; color: #fff;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    min-height: 100vh; max-width: 480px;
+    margin: 0 auto; padding-bottom: 100px;
+    overscroll-behavior: none;
+  }
+
+  /* HEADER */
+  .header { padding: 50px 24px 20px; border-bottom: 1px solid #111; }
+  .header-date { font-size: 11px; color: #444; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .header-clock { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .header-pills { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .pill { font-size: 11px; padding: 4px 12px; border-radius: 100px; border: 1px solid #222; color: #555; letter-spacing: 0.05em; }
+  .pill.done { color: #3a3; border-color: #1a2e1a; }
+
+  /* NOTIF BANNER */
+  .notif-bar { background: #111; border: 1px solid #222; border-radius: 12px; margin: 16px 24px 0; padding: 12px 16px; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .notif-bar button { background: #fff; color: #000; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 80px 24px; color: #2a2a2a; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.7; }
+
+  /* SECTION */
+  .section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; padding: 20px 24px 6px; font-weight: 600; opacity: 0.6; }
+
+  /* TASK ROW */
+  .task-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 24px; position: relative; transition: background 0.15s; }
+  .task-row:active { background: #080808; }
+
+  .task-check {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+    border: 2px solid #333; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; touch-action: manipulation;
+  }
+  .task-check.checked { background: #1a2e1a; border-color: #3a3; }
+  .task-check.checked::after { content: "✓"; font-size: 11px; color: #3a3; line-height: 1; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-top { display: flex; align-items: center; gap: 8px; }
+  .task-time { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #555; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .task-time.done { color: #2a2a2a; }
+  .task-text { font-size: 15px; color: #ccc; line-height: 1.4; word-break: break-word; flex: 1; }
+  .task-text.done { text-decoration: line-through; text-decoration-color: #333; color: #2e2e2e; }
+
+  /* Repeat badge */
+  .repeat-badge {
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 100px; margin-top: 5px; display: inline-block;
+    border: 1px solid #1e1e1e; color: #3a3; background: #0a1a0a;
+  }
+
+  .task-del { background: none; border: none; color: #2a2a2a; cursor: pointer; font-size: 20px; padding: 0 0 0 6px; line-height: 1; flex-shrink: 0; transition: color 0.15s; touch-action: manipulation; margin-top: 0; }
+  .task-del:active { color: #ff4444; }
+
+  .divider { height: 1px; background: #0d0d0d; margin: 0 24px; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; border: none; border-radius: 100px; padding: 15px 32px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 40px #ffffff22; letter-spacing: -0.01em; z-index: 10; font-family: inherit; touch-action: manipulation; transition: transform 0.15s, box-shadow 0.15s; }
+  .fab:active { transform: translateX(-50%) scale(0.96); box-shadow: 0 0 20px #ffffff11; }
+  .fab-icon { font-size: 20px; line-height: 1; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: #000000cc; z-index: 20; display: flex; align-items: flex-end; animation: fadein 0.2s ease; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .sheet { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; margin: 0 auto; padding: 28px 24px max(40px, env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 24px; color: #fff; }
+  .sheet label { display: block; font-size: 11px; color: #444; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .sheet input[type="time"], .sheet input[type="text"] { width: 100%; background: #111; border: 1px solid #1e1e1e; border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none; margin-bottom: 16px; font-family: inherit; -webkit-appearance: none; transition: border 0.15s; }
+  .sheet input:focus { border-color: #333; }
+  .sheet input::placeholder { color: #333; }
+
+  /* Toggle row */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; background: #111; border: 1px solid #1e1e1e; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; cursor: pointer; touch-action: manipulation; }
+  .toggle-label { font-size: 14px; color: #888; }
+  .toggle-label span { display: block; font-size: 11px; color: #444; margin-top: 2px; letter-spacing: 0.03em; }
+  .toggle-switch { width: 44px; height: 26px; border-radius: 100px; background: #1e1e1e; border: 1px solid #2a2a2a; position: relative; transition: background 0.2s; flex-shrink: 0; }
+  .toggle-switch.on { background: #1a3a1a; border-color: #3a3; }
+  .toggle-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #444; transition: all 0.2s; }
+  .toggle-switch.on::after { left: 20px; background: #4a4; }
+
+  .btn-add { width: 100%; background: #fff; color: #000; border: none; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit; touch-action: manipulation; }
+  .btn-add:active { opacity: 0.85; }
+  .btn-cancel { width: 100%; background: none; color: #444; border: none; padding: 14px; font-size: 14px; cursor: pointer; margin-top: 4px; font-family: inherit; touch-action: manipulation; }
+  .btn-cancel:active { color: #666; }
+
+  input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.3); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-date" id="dateEl"></div>
+  <div class="header-clock" id="clockEl"></div>
+  <div class="header-pills" id="pillsEl"></div>
+</div>
+
+<div id="notifBanner"></div>
+<div id="listEl"></div>
+
+<button class="fab" onclick="openModal()">
+  <span class="fab-icon">+</span> Add Task
+</button>
+
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-title">New Task</div>
+    <label>Time</label>
+    <input type="time" id="timeInput" value="07:00"/>
+    <label>Task</label>
+    <input type="text" id="taskInput" placeholder="e.g. Morning walk" onkeydown="if(event.key==='Enter') addTask()"/>
+    <label>Repeat</label>
+    <div class="toggle-row" onclick="toggleRepeatSwitch()">
+      <div class="toggle-label">
+        Repeat daily
+        <span id="toggleHint">Resets every morning</span>
+      </div>
+      <div class="toggle-switch" id="repeatSwitch"></div>
+    </div>
+    <button class="btn-add" onclick="addTask()">Add to Routine</button>
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const PERIODS = [
+  { label: "Morning",   range: [5,12],  color: "#FF6B35" },
+  { label: "Afternoon", range: [12,17], color: "#FFD166" },
+  { label: "Evening",   range: [17,21], color: "#A78BFA" },
+  { label: "Night",     range: [21,29], color: "#38BDF8" },
+];
+
+let tasks = [];
+let notifTimers = [];
+let repeatOn = true; // default toggle state in modal
+
+// ── Storage ───────────────────────────────────────────────
+function save() {
+  try {
+    localStorage.setItem("rutina_v2", JSON.stringify(tasks));
+    localStorage.setItem("rutina_lastDate", todayStr());
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    // migrate from old key if needed
+    const raw = localStorage.getItem("rutina_v2") || localStorage.getItem("amoled_routine");
+    tasks = JSON.parse(raw || "[]");
+    // Ensure all tasks have repeat field (migration)
+    tasks.forEach(t => {
+      if (t.repeat === undefined) t.repeat = true;
+      if (t.done === undefined) t.done = false;
+    });
+  } catch(e) { tasks = []; }
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// ── Daily reset ───────────────────────────────────────────
+function dailyReset() {
+  const lastDate = localStorage.getItem("rutina_lastDate");
+  if (lastDate && lastDate !== todayStr()) {
+    // New day — reset only repeat tasks
+    tasks.forEach(t => { if (t.repeat) t.done = false; });
+    save();
+  }
+}
+
+// ── Time helpers ──────────────────────────────────────────
+function to24h(time) {
+  const [h, m] = time.split(":").map(Number);
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+
+// ── Notifications ─────────────────────────────────────────
+function scheduleAllNotifs() {
+  notifTimers.forEach(clearTimeout);
+  notifTimers = [];
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const now = new Date();
+  tasks.forEach(t => {
+    if (t.done) return;
+    const [h, m] = t.time.split(":").map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    const ms = target - now;
+    if (ms <= 0) return;
+    const timer = setTimeout(() => {
+      try {
+        new Notification("Rutina ⏰", {
+          body: t.task,
+          tag: `rutina-${t.id}`,
+          silent: false
+        });
+      } catch(e) {}
+    }, ms);
+    notifTimers.push(timer);
+  });
+}
+
+async function requestNotifPermission() {
+  if (!("Notification" in window)) return;
+  await Notification.requestPermission();
+  renderNotifBanner();
+  scheduleAllNotifs();
+}
+
+function renderNotifBanner() {
+  const el = document.getElementById("notifBanner");
+  if (!("Notification" in window)) { el.innerHTML = ""; return; }
+  if (Notification.permission === "granted") { el.innerHTML = ""; return; }
+  if (Notification.permission === "denied") {
+    el.innerHTML = `<div class="notif-bar"><span>Enable notifications in settings to get task reminders.</span></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="notif-bar"><span>Get notified when each task is due</span><button onclick="requestNotifPermission()">Allow</button></div>`;
+}
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  const doneCount = tasks.filter(t => t.done).length;
+  document.getElementById("pillsEl").innerHTML =
+    `<span class="pill">${tasks.length} task${tasks.length !== 1 ? 's' : ''}</span>` +
+    (doneCount > 0 ? `<span class="pill done">${doneCount} done</span>` : '');
+
+  const list = document.getElementById("listEl");
+  if (tasks.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><div class="empty-text">No tasks yet.<br>Add your first routine task.</div></div>`;
+    return;
+  }
+
+  // Sort tasks by time before rendering
+  const sorted = [...tasks].sort((a, b) => a.time.localeCompare(b.time));
+
+  let html = "";
+  PERIODS.forEach(period => {
+    const group = sorted.filter(t => {
+      let [h] = t.time.split(":").map(Number);
+      let hour = h < 5 ? h + 24 : h;
+      return hour >= period.range[0] && hour < period.range[1];
+    });
+    if (!group.length) return;
+
+    html += `<div class="section-label" style="color:${period.color}">${period.label}</div>`;
+    group.forEach((t, i) => {
+      html += `
+        <div class="task-row">
+          <div class="task-check ${t.done ? 'checked' : ''}" style="${t.done ? '' : `border-color:${period.color}`}" onclick="toggleTask(${t.id})"></div>
+          <div class="task-body">
+            <div class="task-top">
+              <div class="task-time ${t.done ? 'done' : ''}">${to24h(t.time)}</div>
+              <div class="task-text ${t.done ? 'done' : ''}">${escHtml(t.task)}</div>
+            </div>
+            ${t.repeat ? `<div class="repeat-badge">↻ daily</div>` : ''}
+          </div>
+          <button class="task-del" onclick="deleteTask(${t.id})">×</button>
+        </div>
+        ${i < group.length - 1 ? '<div class="divider"></div>' : ''}
+      `;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Modal toggle ──────────────────────────────────────────
+function toggleRepeatSwitch() {
+  repeatOn = !repeatOn;
+  const sw = document.getElementById("repeatSwitch");
+  const hint = document.getElementById("toggleHint");
+  sw.classList.toggle("on", repeatOn);
+  hint.textContent = repeatOn ? "Resets every morning" : "One-time task, stays checked";
+}
+
+// ── Actions ───────────────────────────────────────────────
+function toggleTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  save();
+  render();
+  scheduleAllNotifs();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save();
+  render();
+  scheduleAllNotifs();
+}
+
+function openModal() {
+  repeatOn = true;
+  document.getElementById("repeatSwitch").classList.add("on");
+  document.getElementById("toggleHint").textContent = "Resets every morning";
+  document.getElementById("modal").style.display = "flex";
+  setTimeout(() => document.getElementById("taskInput").focus(), 100);
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById("modal")) {
+    document.getElementById("modal").style.display = "none";
+    document.getElementById("taskInput").value = "";
+  }
+}
+
+function addTask() {
+  const time = document.getElementById("timeInput").value;
+  const task = document.getElementById("taskInput").value.trim();
+  if (!task) return;
+  tasks.push({ id: Date.now(), time, task, done: false, repeat: repeatOn });
+  tasks.sort((a, b) => a.time.localeCompare(b.time));
+  save();
+  render();
+  closeModal();
+  scheduleAllNotifs();
+}
+
+// ── Clock ─────────────────────────────────────────────────
+function tick() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  document.getElementById("clockEl").textContent = `${h}:${m}`;
+  document.getElementById("dateEl").textContent = now.toLocaleDateString("en-IN", {
+    weekday: "long", month: "long", day: "numeric"
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────
+load();
+dailyReset();
+tick();
+render();
+renderNotifBanner();
+scheduleAllNotifs();
+setInterval(tick, 10000);
+</script>
+</body>
+</html>
